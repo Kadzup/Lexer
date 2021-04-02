@@ -1,6 +1,10 @@
 #include "Token.h"
 
+Token::Token() noexcept {}
+
 Token::Token(Kind kind) noexcept : m_kind(kind) {}
+
+Token::Token(Kind kind, const std::string lexeme) noexcept : m_kind(kind), m_lexeme(lexeme) {};
 
 Token::Token(Kind kind, const char* beg, std::size_t len) noexcept
     : m_kind{ kind }, m_lexeme(beg, len) {}
@@ -46,12 +50,12 @@ bool Token::is_one_of(Kind k1, Kind k2, Ts... ks) const noexcept {
 
 /* Lexeme */
 
-std::string_view Token::lexeme() const noexcept 
+std::string Token::lexeme() const noexcept
 { 
     return m_lexeme; 
 }
 
-void Token::lexeme(std::string_view lexeme) noexcept 
+void Token::lexeme(std::string lexeme) noexcept
 {
     m_lexeme = std::move(lexeme);
 }

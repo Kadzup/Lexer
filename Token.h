@@ -1,5 +1,4 @@
-#include <iostream>
-#include <string>
+#include "stdafx.h"
 
 #pragma once
 
@@ -7,41 +6,36 @@ class Token
 {
 public:
 	enum class Kind {
-        Number,
         Identifier,
         Type,
         LeftParen,
         RightParen,
-        LeftSquare,
-        RightSquare,
-        LeftCurly,
-        RightCurly,
-        LessThan,
-        GreaterThan,
-        Equal,
-        Plus,
-        Minus,
-        Asterisk,
-        Slash,
-        Hash,
-        Dot,
         Comma,
-        Colon,
-        Semicolon,
-        SingleQuote,
-        DoubleQuote,
-        Comment,
-        Pipe,
+		Start,
         End,
         Unexpected,
+		UnknownDataType,
+		UnnecessaryTypeDeclaration,
+		UnknownIdentifier,
+		MissedIdentifier,
+		MissedLeftParen,
+		MissedRightParen,
+		MissedBothParen,
+		MissedTypeBeforeIdentifier,
+		MissedComma,
+		UnexpectedComma,
+		UnhandledError,
+		Fine
 	};
 
 private:
 	Kind m_kind;
-	std::string_view m_lexeme;
+	std::string m_lexeme;
 
 public:
+    Token() noexcept;
 	Token(Kind) noexcept;
+	Token(Kind, const std::string) noexcept;
 	Token(Kind, const char*, std::size_t) noexcept;
 	Token(Kind kind, const char*, const char*) noexcept;
 	~Token() noexcept;
@@ -56,7 +50,7 @@ public:
 	template <typename... Ts>
 	bool is_one_of(Kind, Kind, Ts...) const noexcept;
 
-	std::string_view lexeme() const noexcept;
-	void lexeme(std::string_view) noexcept;
+	std::string lexeme() const noexcept;
+	void lexeme(std::string) noexcept;
 };
 
