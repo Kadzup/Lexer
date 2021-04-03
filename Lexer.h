@@ -11,14 +11,14 @@ public:
 
 private:
 	const char* m_beg = nullptr;
-	std::vector<char> spec_pos;
-	Token prev_token;
+	std::vector<char> m_spec_pos;
+	Token m_prev_token;
 
 protected:
 	bool is_space(char) noexcept;
-	bool is_digit(char) noexcept;
+	bool is_spec_char(char) noexcept;
 	bool is_identifier_char(char) noexcept;
-	bool is_type(std::string) noexcept;
+	bool is_type(std::string_view) noexcept;
 
 private:
 	Token identifier() noexcept;

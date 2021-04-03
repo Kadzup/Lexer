@@ -2,8 +2,8 @@
 
 Lexer::Lexer(const char* beg) noexcept : m_beg{ beg } {
     // temp
-    prev_token = Token(Token::Kind::Start);
-    spec_pos.push_back('#');
+    m_prev_token = Token(Token::Kind::Start);
+    m_spec_pos.push_back('#');
 }
 
 /* Navigation */
@@ -15,12 +15,12 @@ Token Lexer::next() noexcept {
     case '\0': 
     {
         // check for ',' '(' ')'
-        if(!prev_token.is(Token::Kind::MissedBothParen) && !prev_token.is(Token::Kind::MissedLeftParen) && !prev_token.is(Token::Kind::MissedRightParen))
+        if(!m_prev_token.is(Token::Kind::MissedBothParen) && !m_prev_token.is(Token::Kind::MissedLeftParen) && !m_prev_token.is(Token::Kind::MissedRightParen))
         {
-            return prev_token = paren();
+            return m_prev_token = paren();
         }
 
-        return prev_token = Token(Token::Kind::End, m_beg, 1);
+        return m_prev_token = Token(Token::Kind::End, m_beg, 1);
     }
     default: 
     {
@@ -29,30 +29,30 @@ Token Lexer::next() noexcept {
         // is type?
         Token typeToken = type(tempStr);
 
-        if (prev_token.is(Token::Kind::Type) || prev_token.is(Token::Kind::UnnecessaryTypeDeclaration))
+        if (m_prev_token.is(Token::Kind::Type) || m_prev_token.is(Token::Kind::UnnecessaryTypeDeclaration))
         {
             if (typeToken.is(Token::Kind::Type))
             {
-                return prev_token = error(Token::Kind::UnnecessaryTypeDeclaration, tempStr);
+                return m_prev_token = error(Token::Kind::UnnecessaryTypeDeclaration, tempStr);
             }
             else
             {
-                return prev_token = error(Token::Kind::UnknownIdentifier, tempStr);
+                return m_prev_token = error(Token::Kind::UnknownIdentifier, tempStr);
             }
         }
-        else if(prev_token.is(Token::Kind::Identifier))
+        else if(m_prev_token.is(Token::Kind::Identifier))
         { 
-            if (std::find(spec_pos.begin(), spec_pos.end(), '(') != spec_pos.end())
+            if (std::find(m_spec_pos.begin(), m_spec_pos.end(), '(') != m_spec_pos.end())
             {
-                return prev_token = error(Token::Kind::MissedComma, tempStr);
+                return m_prev_token = error(Token::Kind::MissedComma, tempStr);
             }
             else if (typeToken.is(Token::Kind::Type))
             {
-                return prev_token = error(Token::Kind::UnnecessaryTypeDeclaration, tempStr);
+                return m_prev_token = error(Token::Kind::UnnecessaryTypeDeclaration, tempStr);
             }
             else if (typeToken.is(Token::Kind::UnknownDataType))
             {
-                return prev_token = typeToken;
+                return m_prev_token = typeToken;
             }
         }
         else
@@ -60,33 +60,33 @@ Token Lexer::next() noexcept {
             if (typeToken.is(Token::Kind::Type))
             {
                 // is '(' exist?
-                if(std::find(spec_pos.begin(), spec_pos.end(), '(') != spec_pos.end())
+                if(std::find(m_spec_pos.begin(), m_spec_pos.end(), '(') != m_spec_pos.end())
                 {
                     // is ident before?
-                    if (prev_token.is(Token::Kind::Comma))
+                    if (m_prev_token.is(Token::Kind::Comma))
                     {
-                        return prev_token = typeToken;
+                        return m_prev_token = typeToken;
                     }
-                    else if (prev_token.is(Token::Kind::Identifier)) {
-                        return prev_token = error(Token::Kind::MissedComma);
+                    else if (m_prev_token.is(Token::Kind::Identifier)) {
+                        return m_prev_token = error(Token::Kind::MissedComma);
                     }
                     else
                     {
-                        return prev_token = typeToken;
+                        return m_prev_token = typeToken;
                     }
                 }
                 else
                 {
-                    return prev_token = typeToken;
+                    return m_prev_token = typeToken;
                 }
             }
             else if (typeToken.is(Token::Kind::UnknownDataType))
             {
-                return prev_token = typeToken;
+                return m_prev_token = typeToken;
             }
         }
 
-        return prev_token = error(Token::Kind::UnhandledError);
+        return m_prev_token = error(Token::Kind::UnhandledError);
     }
     case 'a':
     case 'b':
@@ -94,38 +94,44 @@ Token Lexer::next() noexcept {
     case 'A':
     case 'B':
     case 'C':
-        return prev_token = identifier();
+        return m_prev_token = identifier();
     case '(': 
     {
-        spec_pos.push_back(peek());
-        return prev_token = atom(Token::Kind::LeftParen);
+        m_spec_pos.push_back(peek());
+        return m_prev_token = atom(Token::Kind::LeftParen);
     }
     case ')':
-        spec_pos.push_back(peek());
+        m_spec_pos.push_back(peek());
 
-        if(prev_token.is(Token::Kind::Type))
+        if(m_prev_token.is(Token::Kind::Type))
         {
-            return prev_token = error(Token::Kind::MissedIdentifier);
+            return m_prev_token = error(Token::Kind::MissedIdentifier);
         }
-        else if (prev_token.is(Token::Kind::Comma))
+        else if (m_prev_token.is(Token::Kind::Comma))
         {
-            return prev_token = error(Token::Kind::UnexpectedComma);
+            return m_prev_token = error(Token::Kind::UnexpectedComma);
         }
 
-        return prev_token = atom(Token::Kind::RightParen);
+        return m_prev_token = atom(Token::Kind::RightParen);
     case ',':
-
-        if (prev_token.is(Token::Kind::LeftParen))
+        if (m_prev_token.is(Token::Kind::LeftParen))
         {
-            return prev_token = error(Token::Kind::UnexpectedComma);
+            get();
+            return m_prev_token = error(Token::Kind::UnexpectedComma);
         }
-        else if (prev_token.is(Token::Kind::Comma))
+        else if (m_prev_token.is(Token::Kind::Comma))
         {
-            return prev_token = error(Token::Kind::UnexpectedComma);
+            get();
+            return m_prev_token = error(Token::Kind::UnexpectedComma);
+        }
+        else if (m_prev_token.is(Token::Kind::UnexpectedComma))
+        {
+            get();
+            return m_prev_token = error(Token::Kind::UnexpectedComma);
         }
         else 
         {
-            return prev_token = atom(Token::Kind::Comma);
+            return m_prev_token = atom(Token::Kind::Comma);
         }
     }
 }
@@ -155,18 +161,14 @@ bool Lexer::is_space(char c) noexcept
     }
 }
 
-bool Lexer::is_digit(char c) noexcept {
-    switch (c) {
-    case '0':
-    case '1':
-    case '2':
-    case '3':
-    case '4':
-    case '5':
-    case '6':
-    case '7':
-    case '8':
-    case '9':
+bool Lexer::is_spec_char(char c) noexcept
+{
+    switch (c)
+    {
+    case '(':
+    case ')':
+    case ',':
+    case '\0':
         return true;
     default:
         return false;
@@ -187,7 +189,7 @@ bool Lexer::is_identifier_char(char c) noexcept {
     }
 }
 
-bool Lexer::is_type(std::string type) noexcept
+bool Lexer::is_type(std::string_view type) noexcept
 {
     if (type.empty())
         return false;
@@ -205,10 +207,25 @@ Token Lexer::atom(Token::Kind kind) noexcept
 Token Lexer::identifier() noexcept 
 {
     const char* start = m_beg;
+    bool isValid = true;
     get();
-    while (is_identifier_char(peek())) get();
 
-    if (prev_token.is_not(Token::Kind::Type) && prev_token.is_not(Token::Kind::UnnecessaryTypeDeclaration)) {
+    while (!is_space(peek()) && !is_spec_char(peek()))
+    {
+        if (!is_identifier_char(peek()))
+        {
+            isValid = false;
+        }
+
+        get();
+    }
+
+    if (!isValid)
+    {
+        return error(Token::Kind::UnknownIdentifier, std::string(start, m_beg));
+    }
+
+    if (m_prev_token.is_not(Token::Kind::Type) && m_prev_token.is_not(Token::Kind::UnnecessaryTypeDeclaration)) {
         return error(Token::Kind::MissedTypeBeforeIdentifier, std::string(start, m_beg));
     }
 
@@ -220,8 +237,7 @@ Token Lexer::type(std::string &str) noexcept
     const char* start = m_beg;
     std::string type = "";
 
-    while (!is_space(peek()) && !is_identifier_char(peek()) &&
-            peek() != '(' &&  peek() != ')') 
+    while (!is_space(peek())  && !is_spec_char(peek()))
     {
         type += peek();
         get();
@@ -236,8 +252,8 @@ Token Lexer::type(std::string &str) noexcept
 
 Token Lexer::paren() noexcept
 {
-    bool lp = std::find(spec_pos.begin(), spec_pos.end(), '(') != spec_pos.end();
-    bool rp = std::find(spec_pos.begin(), spec_pos.end(), ')') != spec_pos.end();
+    bool lp = std::find(m_spec_pos.begin(), m_spec_pos.end(), '(') != m_spec_pos.end();
+    bool rp = std::find(m_spec_pos.begin(), m_spec_pos.end(), ')') != m_spec_pos.end();
 
     if(!lp && !rp)
     {
@@ -262,10 +278,10 @@ Token Lexer::error(Token::Kind kind, std::string name) noexcept
     switch (kind) {
     case Token::Kind::UnknownDataType:
     {
-        errorMessage += "Unknown Data Type ";
+        errorMessage += "Unknown Data Type";
         if (name != "") 
         {
-            errorMessage += "'" + name + "'\0";
+            errorMessage += " '" + name + "'\0";
         }
 
         error = Token(Token::Kind::UnknownDataType, errorMessage);
@@ -274,10 +290,10 @@ Token Lexer::error(Token::Kind kind, std::string name) noexcept
     }
     case Token::Kind::UnknownIdentifier:
     {
-        errorMessage += "Unknown Identifier ";
+        errorMessage += "Unknown Identifier";
         if (name != "")
         {
-            errorMessage += "'" + name + "'";
+            errorMessage += " '" + name + "'";
         }
 
         error = Token(Token::Kind::UnknownIdentifier, errorMessage);
@@ -286,10 +302,10 @@ Token Lexer::error(Token::Kind kind, std::string name) noexcept
     }
     case Token::Kind::UnnecessaryTypeDeclaration:
     {
-        errorMessage += "Unnecessary Type Declaration ";
+        errorMessage += "Unnecessary Type Declaration";
         if (name != "")
         {
-            errorMessage += "'" + name + "'";
+            errorMessage += " '" + name + "'";
         }
 
         error = Token(Token::Kind::UnnecessaryTypeDeclaration, errorMessage);
@@ -298,10 +314,10 @@ Token Lexer::error(Token::Kind kind, std::string name) noexcept
     }
     case Token::Kind::MissedTypeBeforeIdentifier:
     {
-        errorMessage += "Missed Type Before Identifier ";
+        errorMessage += "Missed Type Before Identifier";
         if (name != "")
         {
-            errorMessage += "'" + name + "'";
+            errorMessage += " '" + name + "'";
         }
 
         error = Token(Token::Kind::MissedTypeBeforeIdentifier, errorMessage);
@@ -310,10 +326,10 @@ Token Lexer::error(Token::Kind kind, std::string name) noexcept
     }
     case Token::Kind::MissedIdentifier:
     {
-        errorMessage += "Missed Identifier ";
+        errorMessage += "Missed Identifier";
         if (name != "")
         {
-            errorMessage += "'" + name + "'";
+            errorMessage += " '" + name + "'";
         }
 
         error = Token(Token::Kind::MissedIdentifier, errorMessage);
@@ -322,10 +338,10 @@ Token Lexer::error(Token::Kind kind, std::string name) noexcept
     }
     case Token::Kind::Unexpected:
     {
-        errorMessage += "Unexpected ";
+        errorMessage += "Unexpected";
         if (name != "")
         {
-            errorMessage += "'" + name + "'";
+            errorMessage += " '" + name + "'";
         }
 
         error = Token(Token::Kind::Unexpected, errorMessage);
